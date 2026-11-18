@@ -1857,7 +1857,8 @@ class FinanceDatabase extends _$FinanceDatabase {
     ]);
     query.where(
       (ordinaryHistory | openSchedules) &
-          transactions.skipPaid.equals(false) &
+          // Manual entries also set skipPaid. Only special transactions can be skipped.
+          (type.isNull() | transactions.skipPaid.equals(false)) &
           transactions.pairedTransactionFk.isNull() &
           transactions.objectiveLoanFk.isNull() &
           onlyShowIfNotBalanceCorrection(transactions, false),

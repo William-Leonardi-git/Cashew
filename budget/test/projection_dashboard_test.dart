@@ -276,6 +276,85 @@ void main() {
     expect(filters.activeCount, 0);
   });
 
+  test('manual and imported entries form the baseline alongside dated payments',
+      () async {
+    final db = FinanceDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final start = DateTime(2028, 6);
+    final endExclusive = DateTime(2028, 8);
+    final july = DateTime(2028, 7, 20);
+    final nextJuly = DateTime(2029, 7, 20);
+    for (final entry in [
+      _transaction('salary-june', 2100, start),
+      _transaction('salary-july', 1900, DateTime(2028, 7, 31, 23, 59, 59)),
+      _transaction('groceries-june', -240, DateTime(2028, 6, 5)),
+      _transaction('groceries-july', -160, july),
+      _transaction('imported-card', -100, july, skipPaid: false),
+      _transaction('paid-one-off', -100, july,
+          type: TransactionSpecialType.upcoming),
+      _transaction('last-insurance', -800, july,
+          type: TransactionSpecialType.subscription),
+      _transaction('next-insurance', -800, nextJuly,
+          paid: false, type: TransactionSpecialType.subscription),
+      _transaction('skipped-once', -700, july,
+          paid: false, skipPaid: true, type: TransactionSpecialType.upcoming),
+      _transaction('unposted', -400, july, paid: false),
+      _transaction('before-range', 3000, DateTime(2028, 5, 31, 23, 59, 59)),
+      _transaction('after-range', 3000, endExclusive),
+    ]) {
+      await db.into(db.transactions).insert(entry);
+    }
+
+    final rows = await db
+        .watchFutureProjectionTransactions(
+          historyStart: start,
+          historyEndExclusive: endExclusive,
+        )
+        .first;
+    final history = rows.map((r) => r.$1).where((entry) => entry.paid);
+    expect(
+        history.map((entry) => entry.transactionPk),
+        unorderedEquals([
+          'salary-june',
+          'salary-july',
+          'groceries-june',
+          'groceries-july',
+          'imported-card',
+          'paid-one-off',
+        ]));
+    final average = ProjectionHistory(
+        start: start,
+        endInclusive: DateTime(2028, 7, 31),
+        amounts: [for (final entry in history) entry.amount]);
+    expect(average.monthlyIncome, 2000);
+    expect(average.monthlyExpenses, 300);
+    final upcoming = rows.map((r) => r.$1).where((entry) => !entry.paid).single;
+    expect(upcoming.transactionPk, 'next-insurance');
+    expect(upcoming.dateCreated, nextJuly);
+    final months = projectMonths(
+      startMonth: endExclusive,
+      firstVisibleMonth: DateTime(2029, 6),
+      monthCount: 2,
+      history: average,
+      schedules: [
+        ProjectionSchedule(
+          payment: (
+            name: upcoming.name,
+            amount: upcoming.amount,
+            date: upcoming.dateCreated
+          ),
+          frequency: ProjectionFrequency.yearly,
+          interval: 1,
+        ),
+      ],
+      investments: [],
+      annualReserve: 0,
+    );
+    expect(months.map((month) => month.income), [2000, 2000]);
+    expect(months.map((month) => month.expenses), [300, 1100]);
+    expect(months.map((month) => month.payments.length), [0, 1]);
+  });
+
   test(
       'opening cash follows posted balances by account and time, and due payments stay in the forecast',
       () async {
@@ -306,6 +385,7 @@ Transaction _transaction(String id, double amount, DateTime date,
         {bool paid = true,
         String wallet = 'w',
         String category = 'c',
+        bool? skipPaid,
         TransactionSpecialType? type}) =>
     Transaction(
         transactionPk: id,
@@ -316,6 +396,6 @@ Transaction _transaction(String id, double amount, DateTime date,
         amount: amount,
         dateCreated: date,
         income: amount > 0,
-        skipPaid: false,
+        skipPaid: skipPaid ?? (type == null),
         paid: paid,
         type: type);
