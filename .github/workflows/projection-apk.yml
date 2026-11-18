@@ -43,7 +43,7 @@ jobs:
         run: flutter pub get
 
       - name: Test the projection
-        run: flutter test test/future_projection_test.dart --reporter expanded
+        run: flutter test test/future_projection_test.dart test/projection_dashboard_test.dart --reporter expanded
 
       - name: Build and verify the signed Android release
         env:
@@ -61,13 +61,13 @@ jobs:
             -dname 'CN=Cashew Projection' -noprompt
           printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=cashew-projection\nkeyPassword=%s\n' \
             "$keystore" "$password" "$password" > android/key.properties
-          flutter build apk --release --build-number 417
+          flutter build apk --release --build-number 418
 
           apk=../Cashew-Proiezione.apk
           cp build/app/outputs/flutter-apk/app-release.apk "$apk"
           "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose --print-certs "$apk"
           metadata="$("$ANDROID_HOME/build-tools/34.0.0/aapt" dump badging "$apk")"
-          [[ "$metadata" == *"package: name='com.budget.tracker_app.projection'"* ]]
+          [[ "$metadata" == *"package: name='com.budget.tracker_app.proiezione'"* ]]
           [[ "$metadata" != *application-debuggable* ]]
           sha256sum "$apk" >> "$GITHUB_STEP_SUMMARY"
 

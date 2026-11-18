@@ -1818,6 +1818,19 @@ class FinanceDatabase extends _$FinanceDatabase {
         .watch();
   }
 
+  Stream<Map<String, double>> watchProjectionOpeningBalances(DateTime before) {
+    final total = transactions.amount.sum();
+    final query = selectOnly(transactions)
+      ..addColumns([transactions.walletFk, total])
+      ..where(transactions.paid.equals(true) &
+          transactions.dateCreated.isSmallerThanValue(before))
+      ..groupBy([transactions.walletFk]);
+    return query.watch().map((rows) => {
+          for (final row in rows)
+            row.read(transactions.walletFk)!: row.read(total) ?? 0.0,
+        });
+  }
+
   Stream<List<(Transaction, String)>> watchFutureProjectionTransactions({
     required DateTime historyStart,
     required DateTime historyEndExclusive,

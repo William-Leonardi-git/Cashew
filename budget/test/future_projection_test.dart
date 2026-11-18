@@ -91,6 +91,41 @@ void main() {
     expect(projection.cashFlow, 600);
   });
 
+  test(
+      'moving the chart window preserves earlier cash flows and investment growth',
+      () {
+    final start = DateTime(2027);
+    final schedule = ProjectionSchedule(
+      payment: (name: 'Insurance', amount: -800, date: DateTime(2027, 7, 20)),
+      frequency: ProjectionFrequency.yearly,
+      interval: 1,
+    );
+    List<ProjectedMonth> window(DateTime first, int length) => projectMonths(
+          startMonth: start,
+          firstVisibleMonth: first,
+          monthCount: length,
+          history: history,
+          schedules: [schedule],
+          investments: [
+            (name: 'Plan', monthlyContribution: 100, annualReturn: 6)
+          ],
+          annualReserve: 1200,
+        );
+    final full = window(start, 60);
+    final short = window(DateTime(2029, 6), 6);
+    for (var i = 0; i < short.length; i++) {
+      final expected = full[29 + i];
+      expect(short[i].date, expected.date);
+      expect(short[i].payments, expected.payments);
+      expect(short[i].investmentValue, closeTo(expected.investmentValue, 1e-8));
+      expect(short[i].cumulativeCashFlow,
+          closeTo(expected.cumulativeCashFlow, 1e-8));
+    }
+    expect(short[0].cashFlow, 800);
+    expect(short[1].cashFlow, 0);
+    expect(short[1].payments.single.date, DateTime(2029, 7, 20));
+  });
+
   test('the historical period counts the covered part of each month', () {
     final partial = ProjectionHistory(
       start: DateTime(2028, 2, 15),
