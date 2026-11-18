@@ -33,8 +33,11 @@ jobs:
           flutter-version: '3.19.6'
           cache: true
 
-      - name: Install Android SDK components
-        run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
+      - name: Set up the Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          log-accepted-android-sdk-licenses: false
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
 
       - name: Fetch Dart dependencies
         run: flutter pub get
