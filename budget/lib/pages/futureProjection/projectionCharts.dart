@@ -53,10 +53,20 @@ class _Plot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final formatter = NumberFormat.compact(
-        locale: Localizations.localeOf(context).toString());
-    final style = theme.textTheme.labelSmall
-        ?.copyWith(color: theme.colorScheme.onSurfaceVariant, fontSize: 10);
+    final locale = Localizations.localeOf(context).toString();
+    final compact = NumberFormat.compact(locale: locale);
+    final decimal = NumberFormat.decimalPattern(locale);
+    String tick(double value) {
+      final label = compact.format(value);
+      return value.abs() >= 1000 && RegExp(r'^-?[0-9]{4,}$').hasMatch(label)
+          ? decimal.format(value)
+          : label;
+    }
+
+    final style = theme.textTheme.labelSmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+        fontSize: 10,
+        letterSpacing: .15);
     return DefaultTextStyle(
         style: style ?? const TextStyle(fontSize: 10),
         child: Column(children: [
@@ -77,7 +87,7 @@ class _Plot extends StatelessWidget {
                             Flexible(
                                 child: FittedBox(
                                     fit: BoxFit.scaleDown,
-                                    child: Text(formatter.format(value)))),
+                                    child: Text(tick(value)))),
                         ])),
                 Expanded(
                     child: Padding(
@@ -140,10 +150,11 @@ class ProjectionTrendChart extends StatelessWidget {
       child: _Plot(
           scale: scale,
           height: 129,
-          labels:
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          labels: Stack(children: [
             for (final i in [0, last ~/ 2, last].toSet())
-              Text(fmt.format(months[i].date)),
+              Align(
+                  alignment: Alignment(last == 0 ? -1 : (2 * i / last) - 1, 0),
+                  child: Text(fmt.format(months[i].date))),
           ]),
           child: LayoutBuilder(builder: (context, box) {
             void pick(double x) =>
@@ -163,6 +174,7 @@ class ProjectionTrendChart extends StatelessWidget {
                         minX: 0,
                         maxX: math.max(1, last).toDouble(),
                         minY: scale.low,
+                        baselineY: scale.low,
                         maxY: scale.high,
                         titlesData: const FlTitlesData(show: false),
                         gridData: _grid(context, scale),

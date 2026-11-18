@@ -169,6 +169,7 @@ class _ProjectionDashboardState extends State<ProjectionDashboard> {
                 child: Text(money(current),
                     key: const ValueKey('projection-hero-value'),
                     style: theme.textTheme.displaySmall?.copyWith(
+                        color: scheme.onSurface,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -1.2,
                         height: 1.12)))),
@@ -302,6 +303,9 @@ class _ProjectionDashboardState extends State<ProjectionDashboard> {
     final flow = _Panel(
         icon: Icons.bar_chart_rounded,
         title: 'projection-flows'.tr(),
+        aside: Text(DateFormat.yMMM(locale).format(month.date),
+            style: theme.textTheme.labelMedium
+                ?.copyWith(color: scheme.onSurfaceVariant)),
         children: [
           Row(children: [
             Expanded(

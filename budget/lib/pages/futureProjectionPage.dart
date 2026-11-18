@@ -146,6 +146,7 @@ class _FutureProjectionPageState extends State<FutureProjectionPage> {
   Widget build(BuildContext context) {
     final wallets = context.watch<AllWallets>();
     return PageFramework(
+        expandedHeight: 112,
         title: 'future-projection'.tr(),
         horizontalPaddingConstrained: true,
         listWidgets: [
