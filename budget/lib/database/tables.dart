@@ -1818,6 +1818,50 @@ class FinanceDatabase extends _$FinanceDatabase {
         .watch();
   }
 
+  Stream<List<(Transaction, String)>> watchFutureProjectionTransactions({
+    required DateTime historyStart,
+    required DateTime historyEndExclusive,
+  }) {
+    final type = transactions.type;
+    final ordinaryHistory = transactions.paid.equals(true) &
+        transactions.dateCreated.isBiggerOrEqualValue(historyStart) &
+        transactions.dateCreated.isSmallerThanValue(historyEndExclusive) &
+        (type.isNull() | type.equals(TransactionSpecialType.upcoming.index));
+    final openSchedules = transactions.paid.equals(false) &
+        type.isIn([
+          TransactionSpecialType.subscription.index,
+          TransactionSpecialType.repetitive.index,
+          TransactionSpecialType.upcoming.index,
+        ]) &
+        (transactions.createdAnotherFutureTransaction.isNull() |
+            transactions.createdAnotherFutureTransaction.equals(false));
+
+    final query = select(transactions).join([
+      leftOuterJoin(
+        categories,
+        categories.categoryPk.equalsExp(transactions.categoryFk),
+      ),
+    ]);
+    query.where(
+      (ordinaryHistory | openSchedules) &
+          transactions.skipPaid.equals(false) &
+          transactions.pairedTransactionFk.isNull() &
+          transactions.objectiveLoanFk.isNull() &
+          onlyShowIfNotBalanceCorrection(transactions, false),
+    );
+
+    return query.watch().map((rows) {
+      return rows.map((row) {
+        final transaction = row.readTable(transactions);
+        final name = transaction.name.trim();
+        return (
+          transaction,
+          name.isEmpty ? row.readTableOrNull(categories)?.name ?? '' : name,
+        );
+      }).toList();
+    });
+  }
+
   // This gets all overdue subscription transactions
   (Stream<List<Transaction>>, Future<List<Transaction>>) getAllSubscriptions() {
     final query = select(transactions)

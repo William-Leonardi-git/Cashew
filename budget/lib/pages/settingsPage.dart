@@ -28,6 +28,7 @@ import 'package:budget/pages/editBudgetPage.dart';
 import 'package:budget/pages/editCategoriesPage.dart';
 import 'package:budget/pages/editWalletsPage.dart';
 import 'package:budget/pages/notificationsPage.dart';
+import 'package:budget/pages/futureProjectionPage.dart';
 import 'package:budget/pages/subscriptionsPage.dart';
 import 'package:budget/widgets/accountAndBackup.dart';
 import 'package:budget/widgets/importDB.dart';
@@ -247,6 +248,13 @@ class MorePages extends StatelessWidget {
                   key: settingsGoogleAccountLoginButtonKey,
                 )),
             ],
+          ),
+          SettingsContainerOpenPage(
+            openPage: const FutureProjectionPage(),
+            title: 'future-projection'.tr(),
+            icon: Icons.insights_outlined,
+            isOutlined: true,
+            isWideOutlined: true,
           ),
           if (hasSideNavigation == false)
             Row(
